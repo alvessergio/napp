@@ -8,7 +8,7 @@ import (
 )
 
 type productsAPI interface {
-	GetProducts(ctx context.Context, productID string) ([]*domain.Product, error)
+	GetProducts(ctx context.Context, productID string) []*domain.Product
 	GetProductById(ctx context.Context, productID string) (*domain.Product, error)
 	PutProduct(ctx context.Context, product *domain.Product) (*domain.Product, error)
 	PostProduct(ctx context.Context, product *domain.Product) (*domain.Product, error)
@@ -17,14 +17,10 @@ type productsAPI interface {
 
 type productsServer server
 
-func (p *productsServer) GetProducts(ctx context.Context, productID string) ([]*domain.Product, error) {
+func (p *productsServer) GetProducts(ctx context.Context, productID string) []*domain.Product {
 
-	products, err := p.service.ProductRepository.GetAll()
-	if err != nil {
-		return nil, err
-	}
-
-	return products, nil
+	products := p.service.ProductRepository.GetAll()
+	return products
 }
 
 func (p *productsServer) GetProductById(ctx context.Context, productID string) (*domain.Product, error) {

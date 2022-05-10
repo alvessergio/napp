@@ -12,7 +12,7 @@ import (
 type PorductRepository interface {
 	Insert(product *domain.Product) (*domain.Product, error)
 	Find(id string) (*domain.Product, error)
-	GetAll() ([]*domain.Product, error)
+	GetAll() []*domain.Product
 	Update(product *domain.Product) (*domain.Product, error)
 	Delete(id string) error
 }
@@ -52,12 +52,12 @@ func (repo ProductRepositoryDb) Find(id string) (*domain.Product, error) {
 	return &product, nil
 }
 
-func (repo ProductRepositoryDb) GetAll() ([]*domain.Product, error) {
+func (repo ProductRepositoryDb) GetAll() []*domain.Product {
 	var products []*domain.Product
 
 	repo.Db.Find(&products).Order("name ASC")
 
-	return products, nil
+	return products
 }
 
 func (repo ProductRepositoryDb) Update(product *domain.Product) (*domain.Product, error) {
@@ -84,15 +84,7 @@ func (repo ProductRepositoryDb) Update(product *domain.Product) (*domain.Product
 
 func (repo ProductRepositoryDb) Delete(id string) error {
 
-	repo.Db.Delete(&domain.Product{}, id)
+	err := repo.Db.Delete(&domain.Product{ID: id}).Error
 
-	var p domain.Product
-
-	repo.Db.Find(&p, "id = ?", id)
-
-	if p.ID == "" {
-		return nil
-	}
-
-	return fmt.Errorf("product could not be deleted")
+	return err
 }
