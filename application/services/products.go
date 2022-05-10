@@ -33,7 +33,13 @@ func (p *productsServer) GetProductById(ctx context.Context, productID string) (
 }
 
 func (p *productsServer) PutProduct(ctx context.Context, product *domain.Product) (*domain.Product, error) {
-	return nil, nil
+
+	product, err := p.service.ProductRepository.Update(product)
+	if err != nil {
+		return nil, err
+	}
+
+	return product, nil
 }
 
 func (p *productsServer) PostProduct(ctx context.Context, product *domain.Product) (*domain.Product, error) {
@@ -47,6 +53,11 @@ func (p *productsServer) PostProduct(ctx context.Context, product *domain.Produc
 }
 
 func (p *productsServer) DeleteProduct(ctx context.Context, id string) error {
+	err := p.service.ProductRepository.Delete(id)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
