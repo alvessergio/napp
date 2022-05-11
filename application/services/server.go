@@ -25,7 +25,9 @@ type server struct {
 }
 
 func (s *Service) NewServer() *mux.Router {
-	router := mux.NewRouter()
+	router := mux.NewRouter().
+		PathPrefix("/api/v1/"). // add prefix for v1 api `/api/v1/`
+		Subrouter()
 
 	svr := &server{
 		service: s,
@@ -40,7 +42,7 @@ func (s *Service) NewServer() *mux.Router {
 	router.HandleFunc(productsByIDPath, putProductHadler(productSvr)).Methods(http.MethodPut)
 	router.HandleFunc(productsByIDPath, deleteProductHandler(productSvr)).Methods(http.MethodDelete)
 	router.HandleFunc(healthPath, healthHandler).Methods(http.MethodGet)
-	
+
 	return router
 }
 
