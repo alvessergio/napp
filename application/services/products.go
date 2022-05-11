@@ -17,6 +17,7 @@ type productsAPI interface {
 	PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	DeleteProduct(ctx context.Context, traceID, code string) error
+	PostProductHistory(ctx context.Context, traceID string, product *domain.ProductHistory) (*domain.ProductHistory, error)
 }
 
 type productsServer server
@@ -36,21 +37,21 @@ func (p *productsServer) GetProductByCode(ctx context.Context, traceID, code str
 }
 
 func (p *productsServer) PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
-	product, err := p.service.ProductRepository.Update(product)
+	pro, err := p.service.ProductRepository.Update(product)
 	if err != nil {
 		return nil, err
 	}
 
-	return product, nil
+	return pro, nil
 }
 
 func (p *productsServer) PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
-	product, err := p.service.ProductRepository.Insert(product)
+	pro, err := p.service.ProductRepository.Insert(product)
 	if err != nil {
 		return nil, err
 	}
 
-	return product, nil
+	return pro, nil
 }
 
 func (p *productsServer) DeleteProduct(ctx context.Context, traceID, code string) error {
@@ -60,6 +61,15 @@ func (p *productsServer) DeleteProduct(ctx context.Context, traceID, code string
 	}
 
 	return nil
+}
+
+func (p *productsServer) PostProductHistory(ctx context.Context, traceID string, product *domain.ProductHistory) (*domain.ProductHistory, error) {
+	pro, err := p.service.ProductHistoryRepository.InsertProductHistory(product)
+	if err != nil {
+		return nil, err
+	}
+
+	return pro, nil
 }
 
 func getProductsHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
@@ -147,9 +157,9 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 		}
 
 		defer r.Body.Close()
-		var product *domain.Product
+		var productReq PutProductRequest
 
-		err := json.NewDecoder(r.Body).Decode(&product)
+		err := json.NewDecoder(r.Body).Decode(&productReq)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed_incorrect_request",
@@ -159,7 +169,7 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 			return
 		}
 
-		if reflect.DeepEqual(product, &domain.Product{}) {
+		if reflect.DeepEqual(productReq, PutProductRequest{}) {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed_empty_request",
 				"reason": "request is empty",
@@ -168,9 +178,19 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 			return
 		}
 
+		if isValueMinusThan(productReq.PriceFrom, productReq.PriceTo) {
+			l.WithFields(log.Fields{
+				"event":  "post_product_failed_price_validation",
+				"reason": "price from can not be minus than price to",
+			}).Error("error create a product, price validation")
+			encodeErrorResponse(rw, traceID, NewError(ErrValidation, "price from can not be minus than price to"))
+		}
+
+		product := castPUTRequestToProduct(productReq)
+
 		product.Code = code
 
-		p, err := p.PutProduct(ctx, traceID, product)
+		pro, err := p.PutProduct(ctx, traceID, product)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed",
@@ -180,7 +200,19 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 			return
 		}
 
-		resp, err := json.Marshal(p)
+		productHistory := castRequestToProductHistory(pro)
+
+		proHistory, err := p.PostProductHistory(ctx, traceID, productHistory)
+
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":   "post_producthostory_failed",
+				"reason":  err.Error(),
+				"history": proHistory,
+			}).Warn("error create product history")
+		}
+
+		resp, err := json.Marshal(pro)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "product_serialize_failed",
@@ -224,9 +256,17 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			return
 		}
 
-		product := castRequestToProduct(*productReq)
+		if isValueMinusThan(productReq.PriceFrom, productReq.PriceTo) {
+			l.WithFields(log.Fields{
+				"event":  "post_product_failed_price_validation",
+				"reason": "price from can not be minus than price to",
+			}).Error("error create a product, price validation")
+			encodeErrorResponse(rw, traceID, NewError(ErrValidation, "price from can not be minus than price to"))
+		}
 
-		p, err := p.PostProduct(ctx, traceID, product)
+		product := castPOSTRequestToProduct(*productReq)
+
+		pro, err := p.PostProduct(ctx, traceID, product)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "post_product_failed",
@@ -236,7 +276,19 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			return
 		}
 
-		resp, err := json.Marshal(p)
+		productHistory := castRequestToProductHistory(pro)
+
+		proHistory, err := p.PostProductHistory(ctx, traceID, productHistory)
+
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":   "post_producthostory_failed",
+				"reason":  err.Error(),
+				"history": proHistory,
+			}).Warn("error create product history")
+		}
+
+		resp, err := json.Marshal(pro)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "product_serialize_failed",
@@ -289,16 +341,5 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 		}
 
 		rw.Write(resp)
-	}
-}
-
-func castRequestToProduct(req PostProductRequest) *domain.Product {
-	return &domain.Product{
-		Code:         req.Code,
-		Name:         req.Name,
-		CuttingStock: req.CuttingStock,
-		TotalStock:   req.TotalStock,
-		PriceFrom:    req.PriceFrom,
-		PriceTo:      req.PriceTo,
 	}
 }

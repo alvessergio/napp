@@ -26,8 +26,10 @@ func (e err) Error() string {
 const (
 	// ErrEmptyParams should be used when one or more required params are empty or nil
 	ErrEmptyParams = err("one or more required parameters are empty or nil")
-	// ErrItemNotFound is used when an Item is not found
-	ErrItemNotFound = err("item not found")
+	// ErrItemNotFound is used when aa Product is not found
+	ErrItemNotFound = err("product not found")
+	// ErrValidation is used when a product is not valid
+	ErrValidation = err("validation error")
 )
 
 func IsEqualError(typeErr, returnedErr error) bool {
@@ -45,7 +47,8 @@ type errResponse struct {
 
 func handleError(err error) (statusCode int, msg string) {
 	switch {
-	case IsEqualError(ErrEmptyParams, err):
+	case IsEqualError(ErrEmptyParams, err),
+		IsEqualError(ErrValidation, err):
 		return http.StatusBadRequest, err.Error()
 	case IsEqualError(ErrItemNotFound, err):
 		return http.StatusBadRequest, "product not found"

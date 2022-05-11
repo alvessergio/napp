@@ -75,9 +75,10 @@ func main() {
 			log.Fatalf("error connecting to DB", err.Error())
 		}
 
-		repository := repositories.NewProductRepository(dbConnection)
+		productRepository := repositories.NewProductRepository(dbConnection)
+		productHistoryRepository := repositories.NewProductHistoryRepository(dbConnection)
 
-		svc := services.NewService(repository)
+		svc := services.NewService(productRepository, productHistoryRepository)
 
 		router := svc.NewServer()
 

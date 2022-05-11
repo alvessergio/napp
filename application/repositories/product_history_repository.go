@@ -11,6 +11,7 @@ import (
 
 type PorductHistoryRepository interface {
 	InsertProductHistory(product *domain.ProductHistory) (*domain.ProductHistory, error)
+	FindProductHistory(id string) (*domain.ProductHistory, error)
 }
 
 type ProductHistoryRepositoryDb struct {
