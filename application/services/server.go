@@ -11,7 +11,7 @@ const (
 	// productsPath represents products endpoint
 	productsPath = "/products"
 	// productsPath represents products endpoint search by id
-	productsByIDPath = productsPath + "/{item_id}"
+	productsByIDPath = productsPath + "/{id}"
 	// HealthPath represents health endpoint
 	healthPath = "/health"
 )
@@ -35,7 +35,7 @@ func (s *Service) NewServer() *mux.Router {
 
 	router.HandleFunc(productsPath, getProductsHandler(productSvr)).Methods(http.MethodGet)
 	router.HandleFunc(productsByIDPath, getProductByIdHandler(productSvr)).Methods(http.MethodGet)
-	router.HandleFunc(productsByIDPath, postProductHandler(productSvr)).Methods(http.MethodPost)
+	router.HandleFunc(productsPath, postProductHandler(productSvr)).Methods(http.MethodPost)
 	router.HandleFunc(productsByIDPath, putProductHadler(productSvr)).Methods(http.MethodPut)
 	router.HandleFunc(productsByIDPath, deleteProductHandler(productSvr)).Methods(http.MethodDelete)
 	router.HandleFunc(healthPath, healthHandler).Methods(http.MethodGet)
