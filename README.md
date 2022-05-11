@@ -9,6 +9,11 @@ NAPP integrations is an application wich has lots of microservices to menage the
 4. To stop the docker containers you can run: make stop
 5. To run testes you can run: make test
 
+The expose por available on docker is 8080
+So when docker starts your applocation you can acess by http://localhost:8080/api/v1/
+The Pré route is aways /api/v1/
+The health check route is  http://localhost:8080/api/v1/health
+
 # Documentation
 
 To have a good using of this project you will need follow this two documentations bellow:
