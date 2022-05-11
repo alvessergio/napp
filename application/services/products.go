@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"reflect"
 
 	"github.com/alvessergio/pan-integrations/domain"
 	log "github.com/sirupsen/logrus"
@@ -128,7 +129,46 @@ func getProductByIdHandler(p *productsServer) func(rw http.ResponseWriter, r *ht
 }
 
 func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
-	return func(rw http.ResponseWriter, r *http.Request) {}
+	return func(rw http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		traceID := ctx.Value("traceID").(string)
+		l := log.WithFields(log.Fields{
+			"trace_id": traceID,
+		})
+
+		defer r.Body.Close()
+		var product *domain.Product
+
+		err := json.NewDecoder(r.Body).Decode(&product)
+		if err != nil {
+			encodeErrorResponse(rw, traceID, ErrEmptyParams)
+			return
+		}
+
+		if reflect.DeepEqual(product, &domain.Product{}) {
+			encodeErrorResponse(rw, traceID, ErrEmptyParams)
+			return
+		}
+
+		p, err := p.PutProduct(ctx, traceID, product)
+		if err != nil {
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		resp, err := json.Marshal(p)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "product_serialize_failed",
+				"reason": err,
+			}).Error("error on serialize product")
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.Write(resp)
+	}
 }
 
 func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
