@@ -1,0 +1,222 @@
+swagger: "2.0"
+info:
+  description: "This is a sample server NAPP project."
+  version: "1.0.0"
+  title: "NAPP API"
+  contact:
+    email: "juniorspse@gmail.com"
+host: "localhost:8080"
+basePath: "/api/v1"
+schemes:
+- "http"
+paths:
+  /product:
+    get:
+      tags:
+      - "product"
+      summary: "Returns a list of products"
+      operationId: "getProducts"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: OK
+    post:
+      tags:
+      - "product"
+      summary: "Add a new pet to the store"
+      operationId: "addPet"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Product object that needs to be added to the store"
+        required: true
+          schema:
+            $ref: "#/definitions/ProductRequest"
+      responses:
+        "400":
+          description: "bad request"
+          schema:
+            $ref: "#/definitions/Product"
+          
+  /product/{code}:
+    get:
+      tags:
+      - "product"
+      summary: "Returns a list of products"
+      parameters:
+        - in: path
+          name: code
+          required: true
+          type: string
+          description: Code of Product
+      operationId: "getProductByCode"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: OK
+
+    put:
+      tags:
+      - "product"
+      summary: "Update an existing product"
+      parameters:
+        - in: path
+          name: code
+          required: true
+          type: string
+          description: Code of Product
+        - in: "body"
+          name: "body"
+          description: "Product object that needs to be updated on the store"
+          required: true
+          schema:
+            $ref: "#/definitions/ProductRequest"
+      operationId: "updateProduct"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        "400":
+          description: "Bad Request"
+        "404":
+          description: "Product not found"
+        "405":
+          description: "Validation exception"
+
+    delete:
+      tags:
+      - "product"
+      summary: "Delete an existing product"
+      parameters:
+        - in: path
+          name: code
+          required: true
+          type: string
+          description: Code of Product
+      operationId: "deleteProduct"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        "400":
+          description: "Bad Request"
+        "404":
+          description: "Product not found"
+        "405":
+          description: "Validation exception"
+          
+  /product/{code}/audit:
+    get:
+      tags:
+      - "product"
+      summary: "Returns a list of selected product history"
+      parameters:
+        - in: path
+          name: code
+          required: true
+          type: string
+          description: Code of Product
+      operationId: "getProductAuditByCode"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/ProductHistory"
+
+definitions:
+  Product:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+      name:
+        type: "string"
+      total_stock:
+        type: "integer"
+        format: "int32"
+      cutting_stock:
+        type: "integer"
+        format: "int32"
+      available_stock:
+        type: "integer"
+        format: "int32"
+      created_at:
+        type: "string"
+        format: "date-time"
+      updated_at:
+        type: "string"
+        format: "date-time"
+      price_from:
+        type: "number"
+        format: "decimal"
+      price_to:
+        type: "number"
+        format: "decimal"
+  ProductRequest:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+      name:
+        type: "string"
+      total_stock:
+        type: "integer"
+        format: "int32"
+      cutting_stock:
+        type: "integer"
+        format: "int32"
+      price_from:
+        type: "number"
+        format: "decimal"
+      price_to:
+        type: "number"
+        format: "decimal"
+  ProductHistory:
+    type: "object"
+    properties:
+      code:
+        type: "string"
+      name:
+        type: "string"
+      action:
+        type: "string"
+      total_stock:
+        type: "integer"
+        format: "int32"
+      cutting_stock:
+        type: "integer"
+        format: "int32"
+      available_stock:
+        type: "integer"
+        format: "int32"
+      created_at:
+        type: "string"
+        format: "date-time"
+      updated_at:
+        type: "string"
+        format: "date-time"
+      price_from:
+        type: "number"
+        format: "decimal"
+      price_to:
+        type: "number"
+        format: "decimal"
+externalDocs:
+  description: "Find out more about Project on GitHub"
+  url: "https://github.com/alvessergio/napp"
