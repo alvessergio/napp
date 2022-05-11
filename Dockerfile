@@ -1,34 +1,42 @@
-FROM golang:1.17-alpine3.11
-ENV PATH="$PATH:/bin/bash" \
-    BENTO4_BIN="/opt/bento4/bin" \
-    PATH="$PATH:/opt/bento4/bin"
+# Start from golang base image
+FROM golang:alpine as builder
 
-# FFMPEG
-RUN apk add --update ffmpeg bash curl make
+# ENV GO111MODULE=on
 
-# Install Bento
-WORKDIR /tmp/bento4
-ENV BENTO4_BASE_URL="http://zebulon.bok.net/Bento4/source/" \
-    BENTO4_VERSION="1-5-0-615" \
-    BENTO4_CHECKSUM="5378dbb374343bc274981d6e2ef93bce0851bda1" \
-    BENTO4_TARGET="" \
-    BENTO4_PATH="/opt/bento4" \
-    BENTO4_TYPE="SRC"
-    # download and unzip bento4
-RUN apk add --update --upgrade curl python unzip bash gcc g++ scons && \
-    curl -O -s ${BENTO4_BASE_URL}/Bento4-${BENTO4_TYPE}-${BENTO4_VERSION}${BENTO4_TARGET}.zip && \
-    sha1sum -b Bento4-${BENTO4_TYPE}-${BENTO4_VERSION}${BENTO4_TARGET}.zip | grep -o "^$BENTO4_CHECKSUM " && \
-    mkdir -p ${BENTO4_PATH} && \
-    unzip Bento4-${BENTO4_TYPE}-${BENTO4_VERSION}${BENTO4_TARGET}.zip -d ${BENTO4_PATH} && \
-    rm -rf Bento4-${BENTO4_TYPE}-${BENTO4_VERSION}${BENTO4_TARGET}.zip && \
-    apk del unzip && \
-    # don't do these steps if using binary install
-    cd ${BENTO4_PATH} && scons -u build_config=Release target=x86_64-unknown-linux && \
-    cp -R ${BENTO4_PATH}/Build/Targets/x86_64-unknown-linux/Release ${BENTO4_PATH}/bin && \
-    cp -R ${BENTO4_PATH}/Source/Python/utils ${BENTO4_PATH}/utils && \
-    cp -a ${BENTO4_PATH}/Source/Python/wrappers/. ${BENTO4_PATH}/bin
+# Add Maintainer info
+LABEL maintainer="Sérgio Alves <juniorspse@gmail.com>"
 
-WORKDIR /go/src
+# Install git.
+# Git is required for fetching the dependencies.
+RUN apk update && apk add --no-cache git
 
-#vamos mudar para o endpoint correto. Usando top apenas para segurar o processo rodando
-ENTRYPOINT [ "top" ]
+# Set the current working directory inside the container 
+WORKDIR /app
+
+# Copy go mod and sum files 
+COPY go.mod go.sum ./
+
+# Download all dependencies. Dependencies will be cached if the go.mod and the go.sum files are not changed 
+RUN go mod download 
+
+# Copy the source from the current directory to the working Directory inside the container 
+COPY . .
+
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# Start a new stage from scratch
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the Pre-built binary file from the previous stage. Observe we also copied the .env file
+COPY --from=builder /app/main .
+COPY --from=builder /app/.env .       
+
+# Expose port 8080 to the outside world
+EXPOSE 8080
+
+#Command to run the executable
+CMD ["./main"]

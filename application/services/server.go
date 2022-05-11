@@ -40,6 +40,7 @@ func (s *Service) NewServer() *mux.Router {
 	router.HandleFunc(productsByIDPath, putProductHadler(productSvr)).Methods(http.MethodPut)
 	router.HandleFunc(productsByIDPath, deleteProductHandler(productSvr)).Methods(http.MethodDelete)
 	router.HandleFunc(healthPath, healthHandler).Methods(http.MethodGet)
+	
 	return router
 }
 

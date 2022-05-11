@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/alvessergio/pan-integrations/domain"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,7 +22,6 @@ type productsAPI interface {
 type productsServer server
 
 func (p *productsServer) GetProducts(ctx context.Context, traceID string) []*domain.Product {
-
 	products := p.service.ProductRepository.GetAll()
 	return products
 }
@@ -36,7 +36,6 @@ func (p *productsServer) GetProductById(ctx context.Context, traceID, productID 
 }
 
 func (p *productsServer) PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
-
 	product, err := p.service.ProductRepository.Update(product)
 	if err != nil {
 		return nil, err
@@ -46,7 +45,6 @@ func (p *productsServer) PutProduct(ctx context.Context, traceID string, product
 }
 
 func (p *productsServer) PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
-
 	product, err := p.service.ProductRepository.Insert(product)
 	if err != nil {
 		return nil, err
@@ -84,17 +82,16 @@ func getProductsHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(resp)
 	}
 }
 
 func getProductByIdHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		params := r.URL.Query()
+		vars := mux.Vars(r)
 		ctx := r.Context()
 		traceID := ctx.Value("traceID").(string)
-		id := params.Get("id")
+		id := vars["id"]
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
@@ -127,20 +124,19 @@ func getProductByIdHandler(p *productsServer) func(rw http.ResponseWriter, r *ht
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(resp)
 	}
 }
 
 func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
 		ctx := r.Context()
-		params := r.URL.Query()
 		traceID := ctx.Value("traceID").(string)
+		id := vars["id"]
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
-		id := params.Get("id")
 		if id == "" {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed_no_id",
@@ -194,7 +190,6 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(resp)
 	}
 }
@@ -249,20 +244,19 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(resp)
 	}
 }
 
 func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
 		ctx := r.Context()
-		params := r.URL.Query()
 		traceID := ctx.Value("traceID").(string)
+		id := vars["id"]
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
-		id := params.Get("id")
 		if id == "" {
 			l.WithFields(log.Fields{
 				"event":  "delete_product_failed_no_id",
@@ -292,7 +286,6 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 			return
 		}
 
-		rw.Header().Add("Content-Type", "application/json")
 		rw.Write(resp)
 	}
 }
