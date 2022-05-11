@@ -21,6 +21,15 @@ To have a good using of this project you will need follow this two documentation
     API Calls Link: https://github.com/alvessergio/napp/blob/main/documentation/NAPP.postman_collection.json
     To see and edit you can open on Editor: https://www.postman.com/
 
+# Used Technologies in this project
+1. Golang 1.17
+2. Postgress database
+3. Gorm ORM
+4. Logrus
+5. Docker
+6. Makefile
+7. Testfy
+
 # Observations
 The project is an initial step so some tests are not implemented yet
 
