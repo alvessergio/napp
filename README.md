@@ -37,10 +37,3 @@ To have a good using of this project you will need follow this two documentation
 
 # Observations
 The project is an initial step so some tests are not implemented yet
-
-# Para a avaliação
-Olá senhores recrutadores, gostaria de agradecer desde já pela oportunidade e gostaria de dizer 
-que tentei deixar no projeto um pouquinho das coisas que eu tenho conhecimento. Alguns módulos 
-não estão com 100% de cobertura de testes, mas o motivo principal foi realmente tentar implementar
-outras coisas ao projeto como logs, erros, testes com banco de dados em memória, estrutura e arquitetura
-voltada para microserviços. Espero que gostem do meu trabalho. Até logo.
