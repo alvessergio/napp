@@ -6,15 +6,14 @@ import (
 	"github.com/alvessergio/pan-integrations/domain"
 
 	"github.com/jinzhu/gorm"
-	uuid "github.com/satori/go.uuid"
 )
 
 type PorductRepository interface {
 	Insert(product *domain.Product) (*domain.Product, error)
-	Find(id string) (*domain.Product, error)
+	Find(code string) (*domain.Product, error)
 	GetAll() []*domain.Product
 	Update(product *domain.Product) (*domain.Product, error)
-	Delete(id string) error
+	Delete(code string) error
 }
 
 type ProductRepositoryDb struct {
@@ -26,9 +25,8 @@ func NewProductRepository(db *gorm.DB) *ProductRepositoryDb {
 }
 
 func (repo ProductRepositoryDb) Insert(product *domain.Product) (*domain.Product, error) {
-	if product.ID == "" {
-		id := uuid.NewV4().String()
-		product.ID = id
+	if product.Code == "" {
+		return nil, fmt.Errorf("code is empty")
 	}
 
 	err := repo.Db.Create(product).Error
@@ -40,19 +38,22 @@ func (repo ProductRepositoryDb) Insert(product *domain.Product) (*domain.Product
 	return product, nil
 }
 
-func (repo ProductRepositoryDb) Find(id string) (*domain.Product, error) {
+func (repo *ProductRepositoryDb) Find(code string) (*domain.Product, error) {
+	if code == "" {
+		return nil, fmt.Errorf("code is empty")
+	}
 	var product domain.Product
 
-	repo.Db.Find(&product, "id = ?", id)
+	repo.Db.Find(&product, "code = ?", code)
 
-	if product.ID == "" {
+	if product.Code == "" {
 		return nil, fmt.Errorf("product does not exist")
 	}
 
 	return &product, nil
 }
 
-func (repo ProductRepositoryDb) GetAll() []*domain.Product {
+func (repo *ProductRepositoryDb) GetAll() []*domain.Product {
 	var products []*domain.Product
 
 	repo.Db.Find(&products).Order("name ASC")
@@ -60,20 +61,22 @@ func (repo ProductRepositoryDb) GetAll() []*domain.Product {
 	return products
 }
 
-func (repo ProductRepositoryDb) Update(product *domain.Product) (*domain.Product, error) {
+func (repo *ProductRepositoryDb) Update(product *domain.Product) (*domain.Product, error) {
+	if product.Code == "" {
+		return nil, fmt.Errorf("code is empty")
+	}
 
 	var p domain.Product
 
-	repo.Db.Find(&p, "id = ?", product.ID)
+	repo.Db.Find(&p, "code = ?", product.Code)
 
-	if p.ID == "" {
+	if p.Code == "" {
 		return nil, fmt.Errorf("product does not exist")
 	}
 
 	p.Name = product.Name
 	p.TotalStock = product.TotalStock
 	p.CuttingStock = product.CuttingStock
-	p.AvailableStock = product.AvailableStock
 	p.PriceFrom = product.PriceFrom
 	p.PriceTo = product.PriceTo
 
@@ -82,9 +85,12 @@ func (repo ProductRepositoryDb) Update(product *domain.Product) (*domain.Product
 	return product, nil
 }
 
-func (repo ProductRepositoryDb) Delete(id string) error {
+func (repo *ProductRepositoryDb) Delete(code string) error {
+	if code == "" {
+		return fmt.Errorf("code is empty")
+	}
 
-	err := repo.Db.Delete(&domain.Product{ID: id}).Error
+	err := repo.Db.Delete(&domain.Product{Code: code}).Error
 
 	return err
 }

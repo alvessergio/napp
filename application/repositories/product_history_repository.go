@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"fmt"
+
 	"github.com/alvessergio/pan-integrations/domain"
 
 	"github.com/jinzhu/gorm"
@@ -19,7 +21,7 @@ func NewProductHistoryRepository(db *gorm.DB) *ProductHistoryRepositoryDb {
 	return &ProductHistoryRepositoryDb{Db: db}
 }
 
-func (repo ProductRepositoryDb) InsertProductHistory(product *domain.ProductHistory) (*domain.ProductHistory, error) {
+func (repo *ProductHistoryRepositoryDb) InsertProductHistory(product *domain.ProductHistory) (*domain.ProductHistory, error) {
 	if product.ID == "" {
 		id := uuid.NewV4().String()
 		product.ID = id
@@ -32,4 +34,19 @@ func (repo ProductRepositoryDb) InsertProductHistory(product *domain.ProductHist
 	}
 
 	return product, nil
+}
+
+func (repo *ProductHistoryRepositoryDb) FindProductHistory(id string) (*domain.ProductHistory, error) {
+	if id == "" {
+		return nil, fmt.Errorf("code is empty")
+	}
+	var product domain.ProductHistory
+
+	repo.Db.Find(&product, "id = ?", id)
+
+	if product.ID == "" {
+		return nil, fmt.Errorf("product does not exist")
+	}
+
+	return &product, nil
 }

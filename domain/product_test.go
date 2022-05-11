@@ -21,11 +21,10 @@ func TestValidateIfProductIsEmpty(t *testing.T) {
 func TestValidateIDIsNotAUUID(t *testing.T) {
 	product := domain.NewProduct()
 
-	product.ID = "123"
+	product.Code = "123"
 	product.Name = "fake name"
 	product.TotalStock = 5
 	product.CuttingStock = 3
-	product.AvailableStock = 2
 	product.PriceFrom = json.Number("12,90")
 	product.PriceTo = json.Number("12,01")
 
@@ -37,11 +36,10 @@ func TestValidateIDIsNotAUUID(t *testing.T) {
 func TestValidation(t *testing.T) {
 	product := domain.NewProduct()
 
-	product.ID = uuid.NewV4().String()
+	product.Code = uuid.NewV4().String()
 	product.Name = "fake name"
 	product.TotalStock = 5
 	product.CuttingStock = 3
-	product.AvailableStock = 2
 	product.PriceFrom = json.Number("12,90")
 	product.PriceTo = json.Number("12,01")
 

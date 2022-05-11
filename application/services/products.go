@@ -13,10 +13,10 @@ import (
 
 type productsAPI interface {
 	GetProducts(ctx context.Context, traceID string) []*domain.Product
-	GetProductById(ctx context.Context, traceID, productID string) (*domain.Product, error)
+	GetProductByCode(ctx context.Context, traceID, code string) (*domain.Product, error)
 	PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
-	DeleteProduct(ctx context.Context, traceID, id string) error
+	DeleteProduct(ctx context.Context, traceID, code string) error
 }
 
 type productsServer server
@@ -26,8 +26,8 @@ func (p *productsServer) GetProducts(ctx context.Context, traceID string) []*dom
 	return products
 }
 
-func (p *productsServer) GetProductById(ctx context.Context, traceID, productID string) (*domain.Product, error) {
-	product, err := p.service.ProductRepository.Find(productID)
+func (p *productsServer) GetProductByCode(ctx context.Context, traceID, code string) (*domain.Product, error) {
+	product, err := p.service.ProductRepository.Find(code)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +53,8 @@ func (p *productsServer) PostProduct(ctx context.Context, traceID string, produc
 	return product, nil
 }
 
-func (p *productsServer) DeleteProduct(ctx context.Context, traceID, id string) error {
-	err := p.service.ProductRepository.Delete(id)
+func (p *productsServer) DeleteProduct(ctx context.Context, traceID, code string) error {
+	err := p.service.ProductRepository.Delete(code)
 	if err != nil {
 		return err
 	}
@@ -86,25 +86,25 @@ func getProductsHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 	}
 }
 
-func getProductByIdHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
+func getProductByCodeHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		ctx := r.Context()
 		traceID := ctx.Value("traceID").(string)
-		id := vars["id"]
+		code := vars["code"]
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
-		if id == "" {
+		if code == "" {
 			l.WithFields(log.Fields{
-				"event":  "get_product_by_id_failed_no_id",
-				"reason": "id is empty",
-			}).Error("error getting product by id, id is empty")
-			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "id is empty"))
+				"event":  "get_product_by_code_failed_no_code",
+				"reason": "code is empty",
+			}).Error("error getting product by code, code is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "code is empty"))
 			return
 		}
 
-		product, err := p.GetProductById(ctx, traceID, id)
+		product, err := p.GetProductByCode(ctx, traceID, code)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed",
@@ -133,16 +133,16 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 		vars := mux.Vars(r)
 		ctx := r.Context()
 		traceID := ctx.Value("traceID").(string)
-		id := vars["id"]
+		code := vars["code"]
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
-		if id == "" {
+		if code == "" {
 			l.WithFields(log.Fields{
-				"event":  "put_product_failed_no_id",
-				"reason": "id is empty",
-			}).Error("error update product by id, id is empty")
-			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "id is empty"))
+				"event":  "put_product_failed_no_code",
+				"reason": "code is empty",
+			}).Error("error update product by code, code is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "code is empty"))
 			return
 		}
 
@@ -152,30 +152,30 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 		err := json.NewDecoder(r.Body).Decode(&product)
 		if err != nil {
 			l.WithFields(log.Fields{
-				"event":  "put_product_failed_incorrect_body",
-				"reason": "incorrect body",
-			}).Error("error update product by id, incorrect body")
-			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "incorrect body"))
+				"event":  "put_product_failed_incorrect_request",
+				"reason": "incorrect request",
+			}).Error("error update product by code, incorrect request")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "incorrect request"))
 			return
 		}
 
 		if reflect.DeepEqual(product, &domain.Product{}) {
 			l.WithFields(log.Fields{
-				"event":  "put_product_failed_empty_body",
-				"reason": "body is empty",
-			}).Error("error update product by id, body is empty")
-			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "empty body"))
+				"event":  "put_product_failed_empty_request",
+				"reason": "request is empty",
+			}).Error("error update product by code, request is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "empty request"))
 			return
 		}
 
-		product.ID = id
+		product.Code = code
 
 		p, err := p.PutProduct(ctx, traceID, product)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed",
 				"reason": "internal error",
-			}).Error("error update product by id, internal error")
+			}).Error("error update product by code, internal error")
 			encodeErrorResponse(rw, traceID, err)
 			return
 		}
@@ -203,26 +203,28 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 		})
 
 		defer r.Body.Close()
-		var product *domain.Product
+		var productReq *PostProductRequest
 
-		err := json.NewDecoder(r.Body).Decode(&product)
+		err := json.NewDecoder(r.Body).Decode(&productReq)
 		if err != nil {
 			l.WithFields(log.Fields{
-				"event":  "post_product_failed_incorrect_body",
-				"reason": "incorrect body",
-			}).Error("error create a product, incorrect body")
+				"event":  "post_product_failed_incorrect_request",
+				"reason": "incorrect request",
+			}).Error("error create a product, incorrect request")
 			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "incorrect body"))
 			return
 		}
 
-		if reflect.DeepEqual(product, &domain.Product{}) {
+		if reflect.DeepEqual(productReq, PostProductRequest{}) {
 			l.WithFields(log.Fields{
-				"event":  "post_product_failed_empty_body",
-				"reason": "empty body",
-			}).Error("error create a product, empty body")
+				"event":  "post_product_failed_empty_request",
+				"reason": "empty request",
+			}).Error("error create a product, empty request")
 			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "empty body"))
 			return
 		}
+
+		product := castRequestToProduct(*productReq)
 
 		p, err := p.PostProduct(ctx, traceID, product)
 		if err != nil {
@@ -253,25 +255,25 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 		vars := mux.Vars(r)
 		ctx := r.Context()
 		traceID := ctx.Value("traceID").(string)
-		id := vars["id"]
+		code := vars["code"]
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
-		if id == "" {
+		if code == "" {
 			l.WithFields(log.Fields{
-				"event":  "delete_product_failed_no_id",
-				"reason": "id is empty",
-			}).Error("error delete product by id, id is empty")
-			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "id is empty"))
+				"event":  "delete_product_failed_no_code",
+				"reason": "code is empty",
+			}).Error("error delete product by code, code is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "code is empty"))
 			return
 		}
 
-		err := p.DeleteProduct(ctx, traceID, id)
+		err := p.DeleteProduct(ctx, traceID, code)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "delete_product_failed",
 				"reason": "internal error",
-			}).Error("error update product by id, internal error")
+			}).Error("error delete product by code, internal error")
 			encodeErrorResponse(rw, traceID, err)
 			return
 		}
@@ -287,5 +289,16 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 		}
 
 		rw.Write(resp)
+	}
+}
+
+func castRequestToProduct(req PostProductRequest) *domain.Product {
+	return &domain.Product{
+		Code:         req.Code,
+		Name:         req.Name,
+		CuttingStock: req.CuttingStock,
+		TotalStock:   req.TotalStock,
+		PriceFrom:    req.PriceFrom,
+		PriceTo:      req.PriceTo,
 	}
 }
