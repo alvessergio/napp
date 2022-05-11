@@ -1,27 +1,40 @@
 version: '3'
 services:
-  postgres:
+  db:
     image: "postgres"
+    container_name: database
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=root      
+      - POSTGRES_DB=root  
+    volumes:
+      - .:/go/src/    
     ports:
-      - "5432:5432"  
+      - "5432:5432"
+    networks:
+      - fullstack 
 
-  pgadmin-compose:
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: "email@email.com"
-      PGADMIN_DEFAULT_PASSWORD: "123456"
-    ports:
-      - "54321:80"
-    depends_on:
-      - postgres
-
-  napp-api:
+  app:
     build: .
+    container_name: api
+    environment:
+      - DB_TYPE=postgres
+      - DSN=dbname=root sslmode=disable user=root password=root host=database
+      - DB_TYPE_TEST=sqlite3
+      - DSN_TEST=
+      - ENV=dev
+      - DEBUG=true
+      - AUTO_MIGRATE_DB=true
+    restart: on-failure
     volumes:
       - .:/go/src/
     ports:
-      - "80:80"
+      - "8080:8080"
+    networks:
+      - fullstack
+    depends_on:
+      - db
+
+networks:
+  fullstack:
+    driver: bridge

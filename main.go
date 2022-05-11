@@ -11,7 +11,6 @@ import (
 	"github.com/alvessergio/pan-integrations/application/repositories"
 	"github.com/alvessergio/pan-integrations/application/services"
 	"github.com/alvessergio/pan-integrations/framework/database"
-	"github.com/gorilla/handlers"
 	"github.com/joho/godotenv"
 	log "github.com/sirupsen/logrus"
 )
@@ -83,7 +82,7 @@ func main() {
 
 		err = http.ListenAndServe(":"+defaultPort, router)
 		if err != nil {
-			log.Errorf("error while starting server. %v", handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(router), err)
+			log.Errorf("error while starting server. %v", err)
 			done <- syscall.SIGTERM
 		}
 	}()
