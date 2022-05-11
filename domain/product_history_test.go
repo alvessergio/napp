@@ -43,6 +43,8 @@ func TestProductHistoryValidation(t *testing.T) {
 	product.AvailableStock = 2
 	product.PriceFrom = 12.90
 	product.PriceTo = 12.01
+	product.ProductCode = "A11"
+	product.ActionPoint = "update"
 
 	err := product.Validate()
 
