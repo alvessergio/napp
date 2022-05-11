@@ -14,6 +14,7 @@ type PorductRepository interface {
 	GetAll() []*domain.Product
 	Update(product *domain.Product) (*domain.Product, error)
 	Delete(code string) error
+	FindWithAudit(code string) (*domain.Product, error)
 }
 
 type ProductRepositoryDb struct {
@@ -45,6 +46,21 @@ func (repo *ProductRepositoryDb) Find(code string) (*domain.Product, error) {
 	var product domain.Product
 
 	repo.Db.Find(&product, "code = ?", code)
+
+	if product.Code == "" {
+		return nil, fmt.Errorf("product does not exist")
+	}
+
+	return &product, nil
+}
+
+func (repo *ProductRepositoryDb) FindWithAudit(code string) (*domain.Product, error) {
+	if code == "" {
+		return nil, fmt.Errorf("code is empty")
+	}
+	var product domain.Product
+
+	repo.Db.Preload("ProductHistory").Find(&product, "code = ?", code)
 
 	if product.Code == "" {
 		return nil, fmt.Errorf("product does not exist")

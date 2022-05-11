@@ -3,10 +3,10 @@ package domain_test
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/alvessergio/pan-integrations/domain"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,15 +18,18 @@ func TestValidateIfProductIsEmpty(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestValidateIDIsNotAUUID(t *testing.T) {
+func TestValidateIDIsEmpty(t *testing.T) {
 	product := domain.NewProduct()
 
-	product.Code = "123"
+	product.Code = ""
 	product.Name = "fake name"
 	product.TotalStock = 5
 	product.CuttingStock = 3
 	product.PriceFrom = json.Number("12,90")
 	product.PriceTo = json.Number("12,01")
+	product.AvailableStock = 2
+	product.UpdatedAt = time.Now()
+	product.CreatedAt = time.Now()
 
 	err := product.Validate()
 
@@ -36,12 +39,15 @@ func TestValidateIDIsNotAUUID(t *testing.T) {
 func TestValidation(t *testing.T) {
 	product := domain.NewProduct()
 
-	product.Code = uuid.NewV4().String()
+	product.Code = "abc"
 	product.Name = "fake name"
 	product.TotalStock = 5
 	product.CuttingStock = 3
 	product.PriceFrom = json.Number("12,90")
 	product.PriceTo = json.Number("12,01")
+	product.AvailableStock = 2
+	product.UpdatedAt = time.Now()
+	product.CreatedAt = time.Now()
 
 	err := product.Validate()
 

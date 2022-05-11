@@ -14,6 +14,7 @@ import (
 type productsAPI interface {
 	GetProducts(ctx context.Context, traceID string) []*domain.Product
 	GetProductByCode(ctx context.Context, traceID, code string) (*domain.Product, error)
+	GetProductAuditByCode(ctx context.Context, traceID, code string) (*domain.Product, error)
 	PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	DeleteProduct(ctx context.Context, traceID, code string) error
@@ -28,6 +29,15 @@ func (p *productsServer) GetProducts(ctx context.Context, traceID string) []*dom
 }
 
 func (p *productsServer) GetProductByCode(ctx context.Context, traceID, code string) (*domain.Product, error) {
+	product, err := p.service.ProductRepository.Find(code)
+	if err != nil {
+		return nil, err
+	}
+
+	return product, nil
+}
+
+func (p *productsServer) GetProductAuditByCode(ctx context.Context, traceID, code string) (*domain.Product, error) {
 	product, err := p.service.ProductRepository.Find(code)
 	if err != nil {
 		return nil, err
@@ -117,7 +127,49 @@ func getProductByCodeHandler(p *productsServer) func(rw http.ResponseWriter, r *
 		product, err := p.GetProductByCode(ctx, traceID, code)
 		if err != nil {
 			l.WithFields(log.Fields{
-				"event":  "put_product_failed",
+				"event":  "get_product_failed",
+				"reason": "internal error",
+			}).Error(err.Error())
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		resp, err := json.Marshal(product)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "product_serialize_failed",
+				"reason": err,
+			}).Error("error on serialize product")
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		rw.Write(resp)
+	}
+}
+
+func getProductAuditByCodeHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		ctx := r.Context()
+		traceID := ctx.Value("traceID").(string)
+		code := vars["code"]
+		l := log.WithFields(log.Fields{
+			"trace_id": traceID,
+		})
+		if code == "" {
+			l.WithFields(log.Fields{
+				"event":  "get_product_audit_failed_no_code",
+				"reason": "code is empty",
+			}).Error("error getting product by code, code is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "code is empty"))
+			return
+		}
+
+		product, err := p.GetProductAuditByCode(ctx, traceID, code)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "get_products_audit_failed",
 				"reason": "internal error",
 			}).Error(err.Error())
 			encodeErrorResponse(rw, traceID, err)

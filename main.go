@@ -31,7 +31,7 @@ func init() {
 
 	autoMigrateDb, err := strconv.ParseBool(os.Getenv("AUTO_MIGRATE_DB"))
 	if err != nil {
-		log.Fatalf("Error parsing boolean env var", os.Getenv("AUTO_MIGRATE_DB"))
+		log.Fatalf("Error parsing boolean env var")
 	}
 
 	debug, err := strconv.ParseBool(os.Getenv("DEBUG"))
@@ -72,7 +72,7 @@ func main() {
 		dbConnection, err := db.Connect()
 
 		if err != nil {
-			log.Fatalf("error connecting to DB", err.Error())
+			log.Fatalf("error connecting to DB %v", err.Error())
 		}
 
 		productRepository := repositories.NewProductRepository(dbConnection)
@@ -84,7 +84,7 @@ func main() {
 
 		err = http.ListenAndServe(":"+defaultPort, router)
 		if err != nil {
-			log.Errorf("error while starting server. %v", handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(router), err)
+			log.Errorf("error while starting server. %v", handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(router))
 			done <- syscall.SIGTERM
 		}
 	}()
