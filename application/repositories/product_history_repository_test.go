@@ -23,15 +23,16 @@ func TestProductHistoryRepositoryDbInsert(t *testing.T) {
 	product.TotalStock = 5
 	product.CuttingStock = 3
 	product.AvailableStock = 2
+	product.TotalStock = 5
 	product.PriceFrom = 12.90
 	product.PriceTo = 12.01
+	product.ProductCode = "A11"
+	product.ActionPoint = "update"
 
 	repo := repositories.NewProductHistoryRepository(db)
 	repo.InsertProductHistory(product)
 
-	got, err := repo.FindProductHistory(product.ID)
+	got := repo.FindProductHistory("A11")
 
-	require.NotEmpty(t, got.ID)
-	require.Nil(t, err)
-	require.Equal(t, got.ID, product.ID)
+	require.Equal(t, 1, len(got))
 }

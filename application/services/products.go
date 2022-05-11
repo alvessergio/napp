@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -12,33 +11,33 @@ import (
 )
 
 type productsAPI interface {
-	GetProducts(ctx context.Context, traceID string) []*domain.Product
-	GetProductByCode(ctx context.Context, traceID, code string) *domain.Product
-	GetProductAuditByCode(ctx context.Context, traceID, code string) *domain.Product
-	PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
-	PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
-	DeleteProduct(ctx context.Context, traceID, code string) error
-	PostProductHistory(ctx context.Context, traceID string, product *domain.ProductHistory) (*domain.ProductHistory, error)
+	GetProducts(traceID string) []*domain.Product
+	GetProductByCode(traceID, code string) *domain.Product
+	GetProductAuditByCode(traceID, code string) *domain.Product
+	PutProduct(traceID string, product *domain.Product) (*domain.Product, error)
+	PostProduct(traceID string, product *domain.Product) (*domain.Product, error)
+	DeleteProduct(traceID, code string) error
+	PostProductHistory(traceID string, product *domain.ProductHistory) (*domain.ProductHistory, error)
 }
 
 type productsServer server
 
-func (p *productsServer) GetProducts(ctx context.Context, traceID string) []*domain.Product {
+func (p *productsServer) GetProducts(traceID string) []*domain.Product {
 	products := p.service.ProductRepository.GetAll()
 	return products
 }
 
-func (p *productsServer) GetProductByCode(ctx context.Context, traceID, code string) *domain.Product {
+func (p *productsServer) GetProductByCode(traceID, code string) *domain.Product {
 	product := p.service.ProductRepository.Find(code)
 	return product
 }
 
-func (p *productsServer) GetProductAuditByCode(ctx context.Context, traceID, code string) *domain.Product {
-	product := p.service.ProductRepository.Find(code)
-	return product
+func (p *productsServer) GetProductAuditByCode(traceID, code string) []*domain.ProductHistory {
+	audities := p.service.ProductHistoryRepository.FindProductHistory(code)
+	return audities
 }
 
-func (p *productsServer) PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
+func (p *productsServer) PutProduct(traceID string, product *domain.Product) (*domain.Product, error) {
 	pro, err := p.service.ProductRepository.Update(product)
 	if err != nil {
 		return nil, err
@@ -47,7 +46,7 @@ func (p *productsServer) PutProduct(ctx context.Context, traceID string, product
 	return pro, nil
 }
 
-func (p *productsServer) PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
+func (p *productsServer) PostProduct(traceID string, product *domain.Product) (*domain.Product, error) {
 	pro, err := p.service.ProductRepository.Insert(product)
 	if err != nil {
 		return nil, err
@@ -56,7 +55,7 @@ func (p *productsServer) PostProduct(ctx context.Context, traceID string, produc
 	return pro, nil
 }
 
-func (p *productsServer) DeleteProduct(ctx context.Context, traceID, code string) error {
+func (p *productsServer) DeleteProduct(traceID, code string) error {
 	err := p.service.ProductRepository.Delete(code)
 	if err != nil {
 		return err
@@ -65,7 +64,7 @@ func (p *productsServer) DeleteProduct(ctx context.Context, traceID, code string
 	return nil
 }
 
-func (p *productsServer) PostProductHistory(ctx context.Context, traceID string, product *domain.ProductHistory) (*domain.ProductHistory, error) {
+func (p *productsServer) PostProductHistory(traceID string, product *domain.ProductHistory) (*domain.ProductHistory, error) {
 	pro, err := p.service.ProductHistoryRepository.InsertProductHistory(product)
 	if err != nil {
 		return nil, err
@@ -82,7 +81,7 @@ func getProductsHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			"trace_id": traceID,
 		})
 
-		products := p.GetProducts(ctx, traceID)
+		products := p.GetProducts(traceID)
 
 		resp, err := json.Marshal(products)
 		if err != nil {
@@ -116,7 +115,7 @@ func getProductByCodeHandler(p *productsServer) func(rw http.ResponseWriter, r *
 			return
 		}
 
-		product := p.GetProductByCode(ctx, traceID, code)
+		product := p.GetProductByCode(traceID, code)
 		if product.Code == "" {
 			l.WithFields(log.Fields{
 				"event":  "product_not_found",
@@ -153,27 +152,19 @@ func getProductAuditByCodeHandler(p *productsServer) func(rw http.ResponseWriter
 			l.WithFields(log.Fields{
 				"event":  "get_product_audit_failed_no_code",
 				"reason": "code is empty",
-			}).Error("error getting product by code, code is empty")
+			}).Error("error getting product audit by code, code is empty")
 			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "code is empty"))
 			return
 		}
 
-		product := p.GetProductAuditByCode(ctx, traceID, code)
-		if product.Code == "" {
-			l.WithFields(log.Fields{
-				"event":  "product_not_found",
-				"reason": "not found",
-			}).Error("error getting product by code, not found")
-			encodeErrorResponse(rw, traceID, NewError(ErrResourceNotFound, "product"))
-			return
-		}
+		audities := p.GetProductAuditByCode(traceID, code)
 
-		resp, err := json.Marshal(product)
+		resp, err := json.Marshal(audities)
 		if err != nil {
 			l.WithFields(log.Fields{
-				"event":  "product_serialize_failed",
+				"event":  "audit_serialize_failed",
 				"reason": err,
-			}).Error("error on serialize product")
+			}).Error("error on serialize product audit")
 			encodeErrorResponse(rw, traceID, err)
 			return
 		}
@@ -231,7 +222,7 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 			return
 		}
 
-		gotProduct := p.GetProductAuditByCode(ctx, traceID, code)
+		gotProduct := p.GetProductByCode(traceID, code)
 		if gotProduct.Code == "" {
 			l.WithFields(log.Fields{
 				"event":  "delete_failed_product_not_found",
@@ -245,7 +236,7 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 
 		product.Code = code
 
-		pro, err := p.PutProduct(ctx, traceID, product)
+		pro, err := p.PutProduct(traceID, product)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "put_product_failed",
@@ -255,17 +246,7 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 			return
 		}
 
-		productHistory := castRequestToProductHistory(pro)
-
-		proHistory, err := p.PostProductHistory(ctx, traceID, productHistory)
-
-		if err != nil {
-			l.WithFields(log.Fields{
-				"event":   "post_producthostory_failed",
-				"reason":  err.Error(),
-				"history": proHistory,
-			}).Warn("error create product history")
-		}
+		audit(p, l, product, traceID, "update")
 
 		resp, err := json.Marshal(pro)
 		if err != nil {
@@ -320,7 +301,7 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			return
 		}
 
-		gotProduct := p.GetProductByCode(ctx, traceID, productReq.Code)
+		gotProduct := p.GetProductByCode(traceID, productReq.Code)
 		if gotProduct.Code != "" {
 			l.WithFields(log.Fields{
 				"event":  "post_product_failed_code_validation",
@@ -332,7 +313,7 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 
 		product := castPOSTRequestToProduct(*productReq)
 
-		pro, err := p.PostProduct(ctx, traceID, product)
+		pro, err := p.PostProduct(traceID, product)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "post_product_failed",
@@ -342,17 +323,7 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 			return
 		}
 
-		productHistory := castRequestToProductHistory(pro)
-
-		proHistory, err := p.PostProductHistory(ctx, traceID, productHistory)
-
-		if err != nil {
-			l.WithFields(log.Fields{
-				"event":   "post_producthostory_failed",
-				"reason":  err.Error(),
-				"history": proHistory,
-			}).Warn("error create product history")
-		}
+		audit(p, l, pro, traceID, "create")
 
 		resp, err := json.Marshal(pro)
 		if err != nil {
@@ -386,7 +357,7 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 			return
 		}
 
-		product := p.GetProductAuditByCode(ctx, traceID, code)
+		product := p.GetProductByCode(traceID, code)
 		if product.Code == "" {
 			l.WithFields(log.Fields{
 				"event":  "delete_failed_product_not_found",
@@ -396,7 +367,7 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 			return
 		}
 
-		err := p.DeleteProduct(ctx, traceID, code)
+		err := p.DeleteProduct(traceID, code)
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "delete_product_failed",
@@ -405,6 +376,8 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 			encodeErrorResponse(rw, traceID, err)
 			return
 		}
+
+		audit(p, l, product, traceID, "delete")
 
 		resp, err := json.Marshal("{}")
 		if err != nil {
@@ -417,5 +390,19 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 		}
 
 		rw.Write(resp)
+	}
+}
+
+func audit(p *productsServer, l *log.Entry, product *domain.Product, traceID, action string) {
+
+	productHistory := castRequestToProductHistory(product, action)
+	proHistory, err := p.PostProductHistory(traceID, productHistory)
+
+	if err != nil {
+		l.WithFields(log.Fields{
+			"event":   "post_producthostory_failed",
+			"reason":  err.Error(),
+			"history": proHistory,
+		}).Warn("error create product history")
 	}
 }

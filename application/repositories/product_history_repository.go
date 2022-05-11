@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"fmt"
-
 	"github.com/alvessergio/pan-integrations/domain"
 
 	"github.com/jinzhu/gorm"
@@ -11,7 +9,7 @@ import (
 
 type PorductHistoryRepository interface {
 	InsertProductHistory(product *domain.ProductHistory) (*domain.ProductHistory, error)
-	FindProductHistory(id string) (*domain.ProductHistory, error)
+	FindProductHistory(productCode string) []*domain.ProductHistory
 }
 
 type ProductHistoryRepositoryDb struct {
@@ -37,17 +35,8 @@ func (repo *ProductHistoryRepositoryDb) InsertProductHistory(product *domain.Pro
 	return product, nil
 }
 
-func (repo *ProductHistoryRepositoryDb) FindProductHistory(id string) (*domain.ProductHistory, error) {
-	if id == "" {
-		return nil, fmt.Errorf("code is empty")
-	}
-	var product domain.ProductHistory
-
-	repo.Db.Find(&product, "id = ?", id)
-
-	if product.ID == "" {
-		return nil, fmt.Errorf("product does not exist")
-	}
-
-	return &product, nil
+func (repo *ProductHistoryRepositoryDb) FindProductHistory(productCode string) []*domain.ProductHistory {
+	var audities []*domain.ProductHistory
+	repo.Db.Find(&audities, "product_code = ?", productCode).Order("updated_at DESC")
+	return audities
 }

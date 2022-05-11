@@ -7,11 +7,7 @@ import (
 )
 
 func isValueMinusThan(value, comparingValue float64) bool {
-	if value < comparingValue {
-		return true
-	}
-
-	return false
+	return value < comparingValue
 }
 
 func castPOSTRequestToProduct(req PostProductRequest) *domain.Product {
@@ -49,7 +45,7 @@ func castPUTRequestToProduct(req PutProductRequest) *domain.Product {
 	return pro
 }
 
-func castRequestToProductHistory(pro *domain.Product) *domain.ProductHistory {
+func castRequestToProductHistory(pro *domain.Product, action string) *domain.ProductHistory {
 	product := &domain.ProductHistory{
 		ProductCode:    pro.Code,
 		Name:           pro.Name,
@@ -60,6 +56,7 @@ func castRequestToProductHistory(pro *domain.Product) *domain.ProductHistory {
 		UpdatedAt:      pro.UpdatedAt,
 		CreatedAt:      pro.CreatedAt,
 		AvailableStock: pro.AvailableStock,
+		ActionPoint:    action,
 	}
 
 	return product

@@ -16,8 +16,8 @@ type ProductHistory struct {
 	PriceTo        float64   `json:"price_to" gorm:"type:decimal(10,2)" valid:"notnull"`
 	UpdatedAt      time.Time `json:"updated_at" valid:"-"`
 	CreatedAt      time.Time `json:"created_at" valid:"-"`
-	ProductCode    string    `json:"-" valid:"-" gorm:"column:product_code;notnull"`
-	Product        *Product  `json:"product" valid:"-"`
+	ProductCode    string    `json:"product_code" valid:"notnull"`
+	ActionPoint    string    `json:"action" valid:"notnull"`
 }
 
 func init() {
