@@ -9,7 +9,7 @@ import (
 
 const (
 	// productsPath represents products endpoint
-	productsPath = "/products"
+	productsPath = "/product"
 	// productsPath represents products endpoint search by code
 	productsByCodePath = productsPath + "/{code}"
 	// auditByProductsCodePath represents products audit endpoint search by code
