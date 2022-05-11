@@ -109,6 +109,10 @@ func getProductByIdHandler(p *productsServer) func(rw http.ResponseWriter, r *ht
 
 		product, err := p.GetProductById(ctx, traceID, id)
 		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "put_product_failed",
+				"reason": "internal error",
+			}).Error(err.Error())
 			encodeErrorResponse(rw, traceID, err)
 			return
 		}
@@ -131,27 +135,51 @@ func getProductByIdHandler(p *productsServer) func(rw http.ResponseWriter, r *ht
 func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		params := r.URL.Query()
 		traceID := ctx.Value("traceID").(string)
 		l := log.WithFields(log.Fields{
 			"trace_id": traceID,
 		})
+		id := params.Get("id")
+		if id == "" {
+			l.WithFields(log.Fields{
+				"event":  "put_product_failed_no_id",
+				"reason": "id is empty",
+			}).Error("error update product by id, id is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "id is empty"))
+			return
+		}
 
 		defer r.Body.Close()
 		var product *domain.Product
 
 		err := json.NewDecoder(r.Body).Decode(&product)
 		if err != nil {
-			encodeErrorResponse(rw, traceID, ErrEmptyParams)
+			l.WithFields(log.Fields{
+				"event":  "put_product_failed_incorrect_body",
+				"reason": "incorrect body",
+			}).Error("error update product by id, incorrect body")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "incorrect body"))
 			return
 		}
 
 		if reflect.DeepEqual(product, &domain.Product{}) {
-			encodeErrorResponse(rw, traceID, ErrEmptyParams)
+			l.WithFields(log.Fields{
+				"event":  "put_product_failed_empty_body",
+				"reason": "body is empty",
+			}).Error("error update product by id, body is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "empty body"))
 			return
 		}
 
+		product.ID = id
+
 		p, err := p.PutProduct(ctx, traceID, product)
 		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "put_product_failed",
+				"reason": "internal error",
+			}).Error("error update product by id, internal error")
 			encodeErrorResponse(rw, traceID, err)
 			return
 		}
@@ -173,9 +201,98 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 
 func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		traceID := ctx.Value("traceID").(string)
+		l := log.WithFields(log.Fields{
+			"trace_id": traceID,
+		})
+
+		defer r.Body.Close()
+		var product *domain.Product
+
+		err := json.NewDecoder(r.Body).Decode(&product)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "post_product_failed_incorrect_body",
+				"reason": "incorrect body",
+			}).Error("error create a product, incorrect body")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "incorrect body"))
+			return
+		}
+
+		if reflect.DeepEqual(product, &domain.Product{}) {
+			l.WithFields(log.Fields{
+				"event":  "post_product_failed_empty_body",
+				"reason": "empty body",
+			}).Error("error create a product, empty body")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "empty body"))
+			return
+		}
+
+		p, err := p.PostProduct(ctx, traceID, product)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "post_product_failed",
+				"reason": "internal error",
+			}).Error("error create product, internal error")
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		resp, err := json.Marshal(p)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "product_serialize_failed",
+				"reason": err,
+			}).Error("error on serialize product")
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.Write(resp)
 	}
 }
 
 func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.Request) {
-	return func(rw http.ResponseWriter, r *http.Request) {}
+	return func(rw http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		params := r.URL.Query()
+		traceID := ctx.Value("traceID").(string)
+		l := log.WithFields(log.Fields{
+			"trace_id": traceID,
+		})
+		id := params.Get("id")
+		if id == "" {
+			l.WithFields(log.Fields{
+				"event":  "delete_product_failed_no_id",
+				"reason": "id is empty",
+			}).Error("error delete product by id, id is empty")
+			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "id is empty"))
+			return
+		}
+
+		err := p.DeleteProduct(ctx, traceID, id)
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "delete_product_failed",
+				"reason": "internal error",
+			}).Error("error update product by id, internal error")
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		resp, err := json.Marshal("{}")
+		if err != nil {
+			l.WithFields(log.Fields{
+				"event":  "product_serialize_failed",
+				"reason": err,
+			}).Error("error on serialize response")
+			encodeErrorResponse(rw, traceID, err)
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.Write(resp)
+	}
 }

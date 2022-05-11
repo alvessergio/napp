@@ -33,6 +33,7 @@ func (s *Service) NewServer() *mux.Router {
 
 	productSvr := (*productsServer)(svr)
 
+	router.Use(traceIDMiddleware)
 	router.HandleFunc(productsPath, getProductsHandler(productSvr)).Methods(http.MethodGet)
 	router.HandleFunc(productsByIDPath, getProductByIdHandler(productSvr)).Methods(http.MethodGet)
 	router.HandleFunc(productsPath, postProductHandler(productSvr)).Methods(http.MethodPost)
