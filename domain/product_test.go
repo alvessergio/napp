@@ -1,7 +1,6 @@
 package domain_test
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -25,8 +24,8 @@ func TestValidateIDIsEmpty(t *testing.T) {
 	product.Name = "fake name"
 	product.TotalStock = 5
 	product.CuttingStock = 3
-	product.PriceFrom = json.Number("12,90")
-	product.PriceTo = json.Number("12,01")
+	product.PriceFrom = 12.90
+	product.PriceTo = 12.01
 	product.AvailableStock = 2
 	product.UpdatedAt = time.Now()
 	product.CreatedAt = time.Now()
@@ -43,8 +42,8 @@ func TestValidation(t *testing.T) {
 	product.Name = "fake name"
 	product.TotalStock = 5
 	product.CuttingStock = 3
-	product.PriceFrom = json.Number("12,90")
-	product.PriceTo = json.Number("12,01")
+	product.PriceFrom = 12.90
+	product.PriceTo = 12.01
 	product.AvailableStock = 2
 	product.UpdatedAt = time.Now()
 	product.CreatedAt = time.Now()

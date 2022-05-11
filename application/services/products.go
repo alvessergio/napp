@@ -13,8 +13,8 @@ import (
 
 type productsAPI interface {
 	GetProducts(ctx context.Context, traceID string) []*domain.Product
-	GetProductByCode(ctx context.Context, traceID, code string) (*domain.Product, error)
-	GetProductAuditByCode(ctx context.Context, traceID, code string) (*domain.Product, error)
+	GetProductByCode(ctx context.Context, traceID, code string) *domain.Product
+	GetProductAuditByCode(ctx context.Context, traceID, code string) *domain.Product
 	PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	PostProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error)
 	DeleteProduct(ctx context.Context, traceID, code string) error
@@ -28,22 +28,14 @@ func (p *productsServer) GetProducts(ctx context.Context, traceID string) []*dom
 	return products
 }
 
-func (p *productsServer) GetProductByCode(ctx context.Context, traceID, code string) (*domain.Product, error) {
-	product, err := p.service.ProductRepository.Find(code)
-	if err != nil {
-		return nil, err
-	}
-
-	return product, nil
+func (p *productsServer) GetProductByCode(ctx context.Context, traceID, code string) *domain.Product {
+	product := p.service.ProductRepository.Find(code)
+	return product
 }
 
-func (p *productsServer) GetProductAuditByCode(ctx context.Context, traceID, code string) (*domain.Product, error) {
-	product, err := p.service.ProductRepository.Find(code)
-	if err != nil {
-		return nil, err
-	}
-
-	return product, nil
+func (p *productsServer) GetProductAuditByCode(ctx context.Context, traceID, code string) *domain.Product {
+	product := p.service.ProductRepository.Find(code)
+	return product
 }
 
 func (p *productsServer) PutProduct(ctx context.Context, traceID string, product *domain.Product) (*domain.Product, error) {
@@ -124,13 +116,13 @@ func getProductByCodeHandler(p *productsServer) func(rw http.ResponseWriter, r *
 			return
 		}
 
-		product, err := p.GetProductByCode(ctx, traceID, code)
-		if err != nil {
+		product := p.GetProductByCode(ctx, traceID, code)
+		if product.Code == "" {
 			l.WithFields(log.Fields{
-				"event":  "get_product_failed",
-				"reason": "internal error",
-			}).Error(err.Error())
-			encodeErrorResponse(rw, traceID, err)
+				"event":  "product_not_found",
+				"reason": "not found",
+			}).Error("error getting product by code, not found")
+			encodeErrorResponse(rw, traceID, NewError(ErrResourceNotFound, "product"))
 			return
 		}
 
@@ -166,13 +158,13 @@ func getProductAuditByCodeHandler(p *productsServer) func(rw http.ResponseWriter
 			return
 		}
 
-		product, err := p.GetProductAuditByCode(ctx, traceID, code)
-		if err != nil {
+		product := p.GetProductAuditByCode(ctx, traceID, code)
+		if product.Code == "" {
 			l.WithFields(log.Fields{
-				"event":  "get_products_audit_failed",
-				"reason": "internal error",
-			}).Error(err.Error())
-			encodeErrorResponse(rw, traceID, err)
+				"event":  "product_not_found",
+				"reason": "not found",
+			}).Error("error getting product by code, not found")
+			encodeErrorResponse(rw, traceID, NewError(ErrResourceNotFound, "product"))
 			return
 		}
 
@@ -236,6 +228,17 @@ func putProductHadler(p *productsServer) func(rw http.ResponseWriter, r *http.Re
 				"reason": "price from can not be minus than price to",
 			}).Error("error create a product, price validation")
 			encodeErrorResponse(rw, traceID, NewError(ErrValidation, "price from can not be minus than price to"))
+			return
+		}
+
+		gotProduct := p.GetProductAuditByCode(ctx, traceID, code)
+		if gotProduct.Code == "" {
+			l.WithFields(log.Fields{
+				"event":  "delete_failed_product_not_found",
+				"reason": "not found",
+			}).Error("error delete product by code, not found")
+			encodeErrorResponse(rw, traceID, NewError(ErrResourceNotFound, "delete product failed"))
+			return
 		}
 
 		product := castPUTRequestToProduct(productReq)
@@ -314,6 +317,17 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 				"reason": "price from can not be minus than price to",
 			}).Error("error create a product, price validation")
 			encodeErrorResponse(rw, traceID, NewError(ErrValidation, "price from can not be minus than price to"))
+			return
+		}
+
+		gotProduct := p.GetProductByCode(ctx, traceID, productReq.Code)
+		if gotProduct.Code != "" {
+			l.WithFields(log.Fields{
+				"event":  "post_product_failed_code_validation",
+				"reason": "code already used in another product",
+			}).Error("error create a product, code validation")
+			encodeErrorResponse(rw, traceID, NewError(ErrValidation, "code already used in another product"))
+			return
 		}
 
 		product := castPOSTRequestToProduct(*productReq)
@@ -322,7 +336,7 @@ func postProductHandler(p *productsServer) func(rw http.ResponseWriter, r *http.
 		if err != nil {
 			l.WithFields(log.Fields{
 				"event":  "post_product_failed",
-				"reason": "internal error",
+				"reason": err.Error(),
 			}).Error("error create product, internal error")
 			encodeErrorResponse(rw, traceID, err)
 			return
@@ -369,6 +383,16 @@ func deleteProductHandler(p *productsServer) func(rw http.ResponseWriter, r *htt
 				"reason": "code is empty",
 			}).Error("error delete product by code, code is empty")
 			encodeErrorResponse(rw, traceID, NewError(ErrEmptyParams, "code is empty"))
+			return
+		}
+
+		product := p.GetProductAuditByCode(ctx, traceID, code)
+		if product.Code == "" {
+			l.WithFields(log.Fields{
+				"event":  "delete_failed_product_not_found",
+				"reason": "not found",
+			}).Error("error delete product by code, not found")
+			encodeErrorResponse(rw, traceID, NewError(ErrResourceNotFound, "delete product failed"))
 			return
 		}
 

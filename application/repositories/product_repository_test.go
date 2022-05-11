@@ -1,7 +1,6 @@
 package repositories_test
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/alvessergio/pan-integrations/framework/database"
@@ -25,8 +24,8 @@ func TestProductRepositoryDbInsert(t *testing.T) {
 	product.CuttingStock = 3
 	product.AvailableStock = 2
 	product.TotalStock = 5
-	product.PriceFrom = json.Number("12,90")
-	product.PriceTo = json.Number("12,01")
+	product.PriceFrom = 12.90
+	product.PriceTo = 12.01
 
 	repo := repositories.NewProductHistoryRepository(db)
 	repo.InsertProductHistory(product)

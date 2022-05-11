@@ -27,7 +27,7 @@ const (
 	// ErrEmptyParams should be used when one or more required params are empty or nil
 	ErrEmptyParams = err("one or more required parameters are empty or nil")
 	// ErrItemNotFound is used when aa Product is not found
-	ErrItemNotFound = err("product not found")
+	ErrResourceNotFound = err("resource not found")
 	// ErrValidation is used when a product is not valid
 	ErrValidation = err("validation error")
 )
@@ -50,10 +50,10 @@ func handleError(err error) (statusCode int, msg string) {
 	case IsEqualError(ErrEmptyParams, err),
 		IsEqualError(ErrValidation, err):
 		return http.StatusBadRequest, err.Error()
-	case IsEqualError(ErrItemNotFound, err):
-		return http.StatusBadRequest, "product not found"
+	case IsEqualError(ErrResourceNotFound, err):
+		return http.StatusNotFound, err.Error()
 	default:
-		return http.StatusInternalServerError, "server.internal_error"
+		return http.StatusInternalServerError, "server.internal_error: " + msg
 	}
 }
 

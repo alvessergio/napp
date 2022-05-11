@@ -1,13 +1,12 @@
 package services
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/alvessergio/pan-integrations/domain"
 )
 
-func isValueMinusThan(value, comparingValue json.Number) bool {
+func isValueMinusThan(value, comparingValue float64) bool {
 	if value < comparingValue {
 		return true
 	}

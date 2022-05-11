@@ -10,11 +10,11 @@ import (
 
 type PorductRepository interface {
 	Insert(product *domain.Product) (*domain.Product, error)
-	Find(code string) (*domain.Product, error)
+	Find(code string) *domain.Product
 	GetAll() []*domain.Product
 	Update(product *domain.Product) (*domain.Product, error)
 	Delete(code string) error
-	FindWithAudit(code string) (*domain.Product, error)
+	FindWithAudit(code string) *domain.Product
 }
 
 type ProductRepositoryDb struct {
@@ -39,51 +39,26 @@ func (repo ProductRepositoryDb) Insert(product *domain.Product) (*domain.Product
 	return product, nil
 }
 
-func (repo *ProductRepositoryDb) Find(code string) (*domain.Product, error) {
-	if code == "" {
-		return nil, fmt.Errorf("code is empty")
-	}
+func (repo *ProductRepositoryDb) Find(code string) *domain.Product {
 	var product domain.Product
-
 	repo.Db.Find(&product, "code = ?", code)
-
-	if product.Code == "" {
-		return nil, fmt.Errorf("product does not exist")
-	}
-
-	return &product, nil
+	return &product
 }
 
-func (repo *ProductRepositoryDb) FindWithAudit(code string) (*domain.Product, error) {
-	if code == "" {
-		return nil, fmt.Errorf("code is empty")
-	}
+func (repo *ProductRepositoryDb) FindWithAudit(code string) *domain.Product {
 	var product domain.Product
-
-	repo.Db.Preload("ProductHistory").Find(&product, "code = ?", code)
-
-	if product.Code == "" {
-		return nil, fmt.Errorf("product does not exist")
-	}
-
-	return &product, nil
+	repo.Db.Preload("product_histories").Find(&product, "code = ?", code)
+	return &product
 }
 
 func (repo *ProductRepositoryDb) GetAll() []*domain.Product {
 	var products []*domain.Product
-
 	repo.Db.Find(&products).Order("name ASC")
-
 	return products
 }
 
 func (repo *ProductRepositoryDb) Update(product *domain.Product) (*domain.Product, error) {
-	if product.Code == "" {
-		return nil, fmt.Errorf("code is empty")
-	}
-
 	var p domain.Product
-
 	repo.Db.Find(&p, "code = ?", product.Code)
 
 	if p.Code == "" {
